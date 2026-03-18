@@ -73,7 +73,7 @@ export default function PlantsPage() {
 
             <View style={styles.content}>
                 {plants.map((plants) => (
-                    <View>
+                    <View key={`${plants.display_name}`}>
                         <View style={styles.cardName}>
                             <Text style={styles.cardText}>{plants.display_name}</Text>
                             <Text style={styles.scientificName}> ({plants.scientific_name})</Text>
@@ -149,10 +149,11 @@ const styles = StyleSheet.create({
     cardName: {
         flexDirection: 'row',
         marginBottom: 12,
+        alignItems: 'center'
 
     },
     cardText: {
-        fontSize: 20,
+        fontSize: 17,
         fontWeight: '700'
     },
     box: {
@@ -170,7 +171,7 @@ const styles = StyleSheet.create({
     scientificName: {
         fontStyle: 'italic',
         color: '#555555',
-        fontSize: 20
+        fontSize: 16
     },
     description: {
         fontSize: 16

@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AppScaffold from './components/AppScaffold'; // adjust path if needed
+import AppScaffold from './components/AppScaffold';
 
 
 export default function Index() {
