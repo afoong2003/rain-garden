@@ -9,11 +9,13 @@ interface AppScaffoldProps {
 };
 
 const menuItems: Array<{ key: string; label: string; href: Href }> = [
-    { key: 'dashboard', label: 'Dashboard', href: '/pages/dashboard' },
-    { key: 'plants', label: 'Plant Database', href: '/pages/plants' },
+    { key: 'MyRainGardens', label: 'My Rain Gardens', href: '/homepage/myRainGardens' },
+    { key: 'plants', label: 'Plant Database', href: '/plant_db/plants' },
     { key: 'tasks', label: 'Maintenance Tasks', href: '/pages/tasks' },
     { key: 'survey', label: 'Survey', href: '/' },
-    { key: 'rebates', label: 'Rebates', href: '/pages/rebates' }
+    { key: 'rebates', label: 'Rebates', href: '/pages/rebates' },
+    { key: 'RainGardenDesigner', label: 'Rain Garden Designer', href: '/rain_garden_design/templateList' }
+
 
 
 ];

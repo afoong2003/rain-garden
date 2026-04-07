@@ -1,8 +1,9 @@
 import { StatusBar } from 'expo-status-bar';
+import { StyleSheet, Text, View, Pressable, ScrollView } from 'react-native';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-
 import AppScaffold from '../components/AppScaffold';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+
 
 type Task = {
     id: string;
@@ -15,35 +16,31 @@ type Task = {
 const initialTasks: Task[] = [
     {
         id: 't1',
-        title: 'Check inlet for debris',
+        title: 'Clear debris from inlet',
         details: 'Remove leaves and litter so stormwater can flow into the rain garden.',
         frequency: 'Daily',
         done: false,
     },
     {
         id: 't2',
-        title: 'Inspect standing water',
+        title: 'Check for erosion',
         details: 'Verify water drains within 24-48 hours after rainfall.',
         frequency: 'Daily',
         done: false,
     },
     {
         id: 't3',
-        title: 'Remove invasive weeds',
+        title: 'Prune dead stems',
         details: 'Pull newly sprouted invasive species before they spread.',
-        frequency: 'Weekly',
-        done: false,
-    },
-    {
-        id: 't4',
-        title: 'Check mulch depth',
-        details: 'Maintain mulch at ~2-3 inches and keep away from plant crowns.',
         frequency: 'Weekly',
         done: false,
     },
 ];
 
-export default function TasksPage() {
+
+
+
+export default function Home() {
     const [tasks, setTasks] = useState<Task[]>(initialTasks);
 
     const toggleTask = (taskId: string) => {
@@ -60,12 +57,20 @@ export default function TasksPage() {
     };
 
     return (
-        <AppScaffold title="Maintenance Tasks">
-            <View style={styles.page}>
-                <ScrollView contentContainerStyle={styles.pageContent}>
-                    <Text style={styles.title}>Rain Garden Maintenance</Text>
-                    <Text style={styles.subtitle}>Track daily and weekly tasks to keep your garden healthy.</Text>
+        <AppScaffold title="My Rain Gardens">
+            <View style={styles.container}>
+                <ScrollView>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <View style={styles.tempBox}>
+                            <Text style={styles.text}>CURRENT ATMOSPHERE</Text>
 
+                        </View>
+                        <View style={styles.drainBox}>
+                            <Text style={styles.text}>72HR DRAINAGE</Text>
+                        </View>
+                    </View>
+
+                    <Text style={styles.title}>Maintenance</Text>
                     {tasks.map((task) => (
                         <Pressable key={task.id} onPress={() => toggleTask(task.id)}>
                             <View style={styles.taskCard}>
@@ -76,53 +81,77 @@ export default function TasksPage() {
                                 <View style={styles.taskBody}>
                                     <View style={styles.taskHeaderRow}>
                                         <Text style={[styles.taskTitle, task.done && styles.taskTitleDone]}>{task.title}</Text>
-                                        <View style={styles.frequencyBadge}>
-                                            <Text style={styles.frequencyText}>{task.frequency}</Text>
+                                        <View>
+                                            <FontAwesome5 name="question-circle" size={20} color="black" />
                                         </View>
                                     </View>
-
-                                    <Text style={styles.taskDetails}>{task.details}</Text>
                                 </View>
                             </View>
                         </Pressable>
                     ))}
-
-                    <StatusBar style="dark" />
+                    <Text style={styles.title}>Journal</Text>
                 </ScrollView>
+                <StatusBar style="dark" />
             </View>
-        </AppScaffold>
+        </AppScaffold >
     );
 }
 
 const styles = StyleSheet.create({
-    page: {
+    container: {
         flex: 1,
         backgroundColor: '#f5f5f5',
+        paddingHorizontal: 22,
+        paddingTop: 8,
     },
-    pageContent: {
-        padding: 20,
-        paddingBottom: 30,
+    tempBox: {
+        backgroundColor: '#ffffff',
+        borderRadius: 16,
+        width: '62%',
+        height: 140,
+        borderColor: '#d4d4d4',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+        borderWidth: 1,
+
+    },
+    drainBox: {
+        backgroundColor: '#ffffff',
+        borderRadius: 16,
+        width: '35%',
+        height: 140,
+        borderColor: '#d4d4d4',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+        borderWidth: 1,
+
+
+    },
+    text: {
+        marginTop: 16,
+        marginLeft: 16,
+        fontWeight: 600
+
     },
     title: {
         color: '#111111',
         fontSize: 28,
-        fontWeight: '800',
-        marginBottom: 6,
-    },
-    subtitle: {
-        color: '#333333',
-        fontSize: 15,
-        lineHeight: 22,
-        marginBottom: 16,
+        fontWeight: '600',
+        marginBottom: 10,
+        marginTop: 10
     },
     taskCard: {
         flexDirection: 'row',
         borderRadius: 14,
         backgroundColor: '#ffffff',
         borderWidth: 1,
-        borderColor: '#d4d4d4',
         padding: 14,
         marginBottom: 12,
+        borderColor: '#d4d4d4',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.08,
@@ -151,12 +180,14 @@ const styles = StyleSheet.create({
     taskBody: {
         flex: 1,
         marginLeft: 14,
+        justifyContent: 'center',
     },
     taskHeaderRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 6,
+        marginTop: 2,
+        marginBottom: 0,
         gap: 10,
     },
     taskTitle: {
@@ -186,4 +217,5 @@ const styles = StyleSheet.create({
         fontSize: 14,
         lineHeight: 20,
     },
+
 });

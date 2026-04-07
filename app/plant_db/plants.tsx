@@ -6,6 +6,8 @@ import { Image as ExpoImage } from 'expo-image'
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import Slider from '@react-native-community/slider';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     BottomSheetBackdrop,
     BottomSheetModal,
@@ -15,7 +17,7 @@ import {
 import AppScaffold from '../components/AppScaffold';
 
 interface Plant {
-    plant_id?: number;
+    plant_id: number;
     display_name?: string;
     scientific_name?: string;
     popularity_rating?: number;
@@ -25,6 +27,7 @@ interface Plant {
     tags?: string[];
 };
 
+
 export default function PlantsPage() {
     const router = useRouter();
     const [plants, setPlants] = useState<Plant[]>([]);
@@ -33,13 +36,30 @@ export default function PlantsPage() {
     const [query, setQuery] = useState('');
     const [debounce, setDebounce] = useState('');
     const bottomSheetRef = useRef<BottomSheetModal>(null);
-    const snapPoints = useMemo(() => ['65%'], []);
+    const snapPoints = useMemo(() => ['75%'], []);
     const sunFilters = ['Full Sun', 'Partial Sun', 'Sun Shade']
     const moistureFilters = ['Wet Moisture', 'Medium Moisture', 'Dry Moisture']
+    const positionFilters = ['Base', 'Slope', 'Margin']
+    const flowerColors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'white']
+    const wildLife = [
+        { label: "Bees", icon: "bee" },
+        { label: "Birds", icon: "bird" },
+        { label: "Butterflies", icon: "butterfly" },
+    ] as const
+    const tolerances = ['Flood', 'Drought']
+    const [selectedWildLife, setWildLife] = useState<string | null>(null);
+    const [selectedFlowerColor, setFlowerColor] = useState<string | null>(null);
+    const [selectedTolerance, setTolerance] = useState<string | null>(null);
     const [selectedSun, setSun] = useState<string | null>(null);
     const [selectedMoisture, setMoisture] = useState<string | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
     const [activeKey, setActiveKey] = useState('');
+    const [selectedPosition, setPosition] = useState<string | null>(null);
+    const [height, setHeight] = useState(0);
+    const [isFavorited, setIsFavorited] = useState(false)
+    const [savedPlantIds, setSavedPlantIds] = useState<number[]>([]);
+
+
 
     const filterInfo: Record<string, string> = {
         'Sun Exposure': `Full Sun: Plant thrives with >6 hours of sunlight during the growing period.
@@ -49,7 +69,10 @@ Sun Shade: Plant thrives with < 3 hours of sunlight during the growing period.
         'Plant Moisture': `Wet Moisture: Plant thrives in wet soil; soggy or marshy most of the time.
 Medium Moisture: Plant thrives in average soil; water can soak in without runoff.
 Dry Moisture: Plant thrives in dry soil; water is excessively drained.
-                `,
+        `,
+        'Position': `Base: Plant prefers wet conditions, tolerates moist to waterlogged soil, and may possess high flood tolerance.
+Slope: Plant prefers moderate conditions, tolerates moderate moisture, and may have occasional flood tolerance.
+Margin: Plant prefers drier conditions, tolerates low moisture, and may have drought tolerance.`
     }
 
     type filterModalProps = {
@@ -57,6 +80,68 @@ Dry Moisture: Plant thrives in dry soil; water is excessively drained.
         onClose: () => void;
         filterKey: string;
     };
+
+    async function getFavorite() {
+        try {
+            const favoritePlants = await AsyncStorage.getItem('favoritePlants');
+            let favoritePlantsList = []
+
+            if (favoritePlants !== null) {
+                favoritePlantsList = JSON.parse(favoritePlants)
+            }
+            return favoritePlantsList
+        } catch (error) {
+            console.log(error)
+            return []
+        }
+    }
+
+    useEffect(() => {
+        async function loadFavorites() {
+            const listOfFavoritePlants = await getFavorite()
+            setSavedPlants(listOfFavoritePlants)
+        }
+        loadFavorites();
+    }, []);
+
+    async function addFavorite(plant_id: number) {
+        try {
+            let currentList = await getFavorite();
+            let duplicate = false
+
+            for (let i = 0; i < currentList.length; i++) {
+                if (currentList[i] === plant_id) {
+                    duplicate = true;
+                    break
+                }
+            }
+            if (duplicate === false) {
+                currentList.push(plant_id)
+                const stringList = JSON.stringify(currentList)
+                await AsyncStorage.setItem('favoritePlants', stringList)
+                console.log(`Added plant id ${plant_id}`)
+            }
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
+    async function removeFavorite(plant_id: number) {
+        try {
+            let currentList = await getFavorite();
+            for (let i = 0; i < currentList.length; i++) {
+                if (currentList[i] === plant_id) {
+                    currentList.splice(i, 1);
+                    break;
+                }
+            }
+            console.log(`removed plant id ${plant_id}`)
+            const stringList = JSON.stringify(currentList);
+            await AsyncStorage.setItem('favoritePlants', stringList);
+        } catch (error) {
+            console.log(error)
+        }
+    }
 
     const FilterInfoModal = ({ visible, onClose, filterKey }: filterModalProps) => {
         const filterText = filterInfo[filterKey]
@@ -88,48 +173,102 @@ Dry Moisture: Plant thrives in dry soil; water is excessively drained.
     const plantPage = useCallback(
         (plantId?: number) => {
             router.push({
-                pathname: '/pages/plant_card',
+                pathname: '/plant_db/plant_card',
                 params: { plant_id: plantId ?? '' },
             });
         },
         [router]
     );
+    const [savedPlants, setSavedPlants] = useState<number[]>([]);
 
     const renderPlantItem: ListRenderItem<Plant> = useCallback(
-        ({ item }) => (
-            <Pressable
-                key={item.plant_id}
-                style={styles.card}
-                onPress={() => plantPage(item.plant_id)}
-            >
-                <ExpoImage
-                    source={{ uri: item.image }}
-                    style={styles.cardImage}
-                    contentFit="cover"
-                />
-                <View style={styles.cardBody}>
-                    <Text style={styles.cardTitle}>{item.display_name}</Text>
-                    <Text style={styles.scientificName}>{item.scientific_name}</Text>
-                </View>
-                <View style={styles.heartIcon}>
-                    <Pressable>
-                        <Ionicons name="heart-outline" size={26} color="black" />
-                        <Ionicons name="heart-sharp" size={24} color="pink" />
-                    </Pressable>
-                </View>
-            </Pressable>
-        ),
-        [plantPage]
+        ({ item }) => {
+            const isFavorited = savedPlants.includes(item.plant_id);
+
+            return (
+                <Pressable
+                    key={item.plant_id}
+                    style={styles.card}
+                    onPress={() => plantPage(item.plant_id)}
+                >
+                    <ExpoImage
+                        source={{ uri: item.image }}
+                        style={styles.cardImage}
+                        contentFit='cover'
+                        transition={120}
+                    />
+                    <View style={styles.cardBody}>
+                        <Text style={styles.cardTitle}>{item.display_name}</Text>
+                        <Text style={styles.scientificName}>{item.scientific_name}</Text>
+                    </View>
+                    <View style={styles.heartIcon}>
+                        <Pressable
+                            onPress={() => {
+                                if (isFavorited) {
+                                    removeFavorite(item.plant_id)
+                                    setSavedPlants(savedPlants.filter(id => id !== item.plant_id));
+                                } else {
+                                    addFavorite(item.plant_id)
+                                    setSavedPlants([...savedPlants, item.plant_id]);
+                                }
+                            }}
+                        >
+                            {isFavorited ? (
+                                <Ionicons name="heart-sharp" size={26} color="pink" />
+                            ) : (
+                                <Ionicons name="heart-outline" size={26} color="black" />
+                            )}
+                        </Pressable>
+                    </View>
+                </Pressable>
+            );
+        },
+        [plantPage, savedPlants]
     );
 
     const openSheet = () => {
         bottomSheetRef.current?.present();
     };
 
-    async function applyFilter() {
+    async function applyFilter(selectedSun: string | null, selectedMoisture: string | null, selectedPosition: string | null) {
         try {
-            const response = await fetch('http://192.168.0.114:8000/plants/filter')
-            const filtered_plants: Plant[] = await response.json()
+            if (!selectedMoisture && !selectedSun && !selectedPosition) return
+
+            const filter: Record<string, boolean> = {}
+
+            if (selectedSun === 'Full Sun') {
+                filter["sun_full"] = true
+            } else if (selectedSun === 'Partial Sun') {
+                filter["sun_partial"] = true
+            } else if (selectedSun === 'Sun Shade') {
+                filter["sun_shade"] = true
+            }
+
+            if (selectedMoisture === 'Wet Moisture') {
+                filter["moisture_wet"] = true
+            } else if (selectedMoisture === 'Medium Moisture') {
+                filter["moisture_medium"] = true
+            } else if (selectedMoisture === 'Dry Moisture') {
+                filter["moisture_dry"] = true
+            }
+
+            if (selectedPosition === 'Base') {
+                filter["Base"] = true
+            } else if (selectedPosition === 'Slope') {
+                filter["Slope"] = true
+            } else if (selectedPosition === 'Margin') {
+                filter["Margin"] = true
+            }
+
+            const response = await fetch('http://0.0.0.0:8000/plants/filter', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(filter)
+            });
+
+            const filtered_plants: Plant[] = await response.json();
 
             setPlants(filtered_plants)
 
@@ -140,7 +279,7 @@ Dry Moisture: Plant thrives in dry soil; water is excessively drained.
 
     const closeSheet = () => {
         bottomSheetRef.current?.dismiss();
-        applyFilter();
+        applyFilter(selectedSun, selectedMoisture, selectedPosition);
     };
 
     useEffect(() => {
@@ -155,13 +294,17 @@ Dry Moisture: Plant thrives in dry soil; water is excessively drained.
 
     useEffect(() => {
         async function fetchPlants() {
+            const hasFilter = !!selectedSun || !!selectedMoisture || !!selectedPosition;
+            if (hasFilter) return;
+
             try {
+
                 let url
 
                 if (!debounce) {
-                    url = 'http://192.168.0.114:8000/plants/preview'
+                    url = 'http://0.0.0.0:8000/plants/preview'
                 } else {
-                    url = `http://192.168.0.114:8000/plants/search?q=${encodeURIComponent(debounce)}`
+                    url = `http://0.0.0.0:8000/plants/search?q=${encodeURIComponent(debounce)}`
 
                 }
 
@@ -175,7 +318,7 @@ Dry Moisture: Plant thrives in dry soil; water is excessively drained.
             }
         }
         fetchPlants()
-    }, [debounce])
+    }, [debounce, selectedMoisture, selectedSun, selectedPosition])
 
     return (
         <AppScaffold title="Plant Database">
@@ -229,9 +372,74 @@ Dry Moisture: Plant thrives in dry soil; water is excessively drained.
                     )}
                 >
                     <BottomSheetView style={styles.sheetContent}>
-                        <Text style={{ fontSize: 22, fontWeight: '600', textAlign: 'center' }}>
+                        <Text style={{ fontSize: 20, fontWeight: '600', textAlign: 'center' }}>
                             Filter Plants
                         </Text>
+
+                        <View style={styles.iconAndTitle}>
+                            <Text style={styles.sheetTitle}>Plant Color</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', }}>
+                            {flowerColors.map((option) => {
+                                const isSelected = selectedFlowerColor === option;
+
+                                return (
+                                    <Pressable
+                                        key={option}
+                                        onPress={() =>
+                                            setFlowerColor((prev) => (prev === option ? null : option))
+                                        }
+                                        style={isSelected ? styles.selectedFilterContainer : styles.unSelectedfilterContainer}
+                                    >
+                                        <Text style={isSelected ? styles.selectedFilterText : styles.unSelectedFilterText}>{option}</Text>
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
+
+
+                        <View style={styles.iconAndTitle}>
+                            <Text style={styles.sheetTitle}>Position</Text>
+                            <Pressable onPress={() => openModalWithKey('Position')}>
+                                <FontAwesome5 name="question-circle" size={16} color="black" />
+                            </Pressable>
+                            <FilterInfoModal
+                                visible={modalVisible}
+                                onClose={() => setModalVisible(false)}
+                                filterKey={activeKey}
+                            />
+                            <Text style={{ marginLeft: 90, fontSize: 16, fontWeight: 600 }}>Plant Height</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', }}>
+                            {positionFilters.map((option) => {
+                                const isSelected = selectedPosition === option;
+
+                                return (
+                                    <Pressable
+                                        key={option}
+                                        onPress={() =>
+                                            setPosition((prev) => (prev === option ? null : option))
+                                        }
+                                        style={isSelected ? styles.selectedFilterContainer : styles.unSelectedfilterContainer}
+                                    >
+                                        <Text style={isSelected ? styles.selectedFilterText : styles.unSelectedFilterText}>{option}</Text>
+                                    </Pressable>
+                                );
+                            })}
+                            <View style={{ width: 200, alignItems: 'center', justifyContent: 'center' }}>
+                                <Slider
+                                    minimumValue={1}
+                                    maximumValue={20}
+                                    step={1}
+                                    value={height}
+                                    onValueChange={setHeight}
+                                    minimumTrackTintColor="#111111"
+                                    maximumTrackTintColor="#C7C7C7"
+                                    thumbTintColor="#111111"
+                                    style={{ width: 150 }}
+                                />
+                            </View>
+                        </View>
                         <View style={styles.iconAndTitle}>
                             <Text style={styles.sheetTitle}>Sun Exposure</Text>
                             <Pressable onPress={() => openModalWithKey('Sun Exposure')}>
@@ -242,7 +450,6 @@ Dry Moisture: Plant thrives in dry soil; water is excessively drained.
                                 onClose={() => setModalVisible(false)}
                                 filterKey={activeKey}
                             />
-
                         </View>
 
                         <View style={{ flexDirection: 'row' }}>
@@ -289,6 +496,77 @@ Dry Moisture: Plant thrives in dry soil; water is excessively drained.
                                     >
                                         <Text style={isSelected ? styles.selectedFilterText : styles.unSelectedFilterText}>{option}</Text>
                                     </Pressable>
+                                );
+                            })}
+                        </View>
+
+
+                        <View style={styles.iconAndTitle}>
+                            <Text style={styles.sheetTitle}>Tolerances</Text>
+                            <Pressable onPress={() => openModalWithKey('Plant Moisture')}>
+                                <FontAwesome5 name="question-circle" size={16} color="black" />
+                            </Pressable>
+                            <FilterInfoModal
+                                visible={modalVisible}
+                                onClose={() => setModalVisible(false)}
+                                filterKey={activeKey}
+                            />
+                        </View>
+
+                        <View style={{ flexDirection: 'row', }}>
+                            {tolerances.map((option) => {
+                                const isSelected = selectedMoisture === option;
+
+                                return (
+                                    <Pressable
+                                        key={option}
+                                        onPress={() =>
+                                            setMoisture((prev) => (prev === option ? null : option))
+                                        }
+                                        style={isSelected ? styles.selectedFilterContainer : styles.unSelectedfilterContainer}
+                                    >
+                                        <Text style={isSelected ? styles.selectedFilterText : styles.unSelectedFilterText}>{option}</Text>
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
+                        <View style={styles.iconAndTitle}>
+                            <Text style={styles.sheetTitle}>WILDLIFE SUPPORTED</Text>
+                            <Pressable onPress={() => openModalWithKey('Plant Moisture')}>
+                                <FontAwesome5 name="question-circle" size={16} color="black" />
+                            </Pressable>
+                            <FilterInfoModal
+                                visible={modalVisible}
+                                onClose={() => setModalVisible(false)}
+                                filterKey={activeKey}
+                            />
+                        </View>
+
+                        <View style={{ flexDirection: 'row', }}>
+                            {wildLife.map((option) => {
+                                const isSelected = selectedWildLife === option.label;
+
+                                return (
+                                    <Pressable
+                                        key={option.label}
+                                        onPress={() =>
+                                            setWildLife((prev) => (prev === option.label ? null : option.label))
+                                        }
+                                        style={isSelected ? styles.selectedFilterContainer : styles.unSelectedfilterContainer}
+                                    >
+                                        <MaterialCommunityIcons
+                                            name={option.icon}
+                                            size={16}
+                                            color={isSelected ? "white" : "black"}
+                                            style={{ marginRight: 6 }}
+                                        />
+                                        <Text style={isSelected ? styles.selectedFilterText : styles.unSelectedFilterText}>
+                                            {option.label}
+
+                                        </Text>
+
+                                    </Pressable>
+
                                 );
                             })}
                         </View>
@@ -349,15 +627,16 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 2,
         flexDirection: 'row',
-        alignItems: 'stretch',
+        alignItems: 'center',
     },
     cardImage: {
-        width: 100,
-        height: 100,
+        width: 108,
+        height: 108,
         backgroundColor: '#e0e0e0',
     },
     cardBody: {
         flex: 1,
+        minWidth: 0,
         padding: 12,
     },
     cardTitle: {
@@ -387,6 +666,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 8,
+        marginTop: 8
     },
     tagChip: {
         borderRadius: 999,
@@ -453,7 +733,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 15
     },
     sheetTitle: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: 600,
 
     },
@@ -463,24 +743,26 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         marginRight: 6,
         marginTop: 10,
-        padding: 12,
-        borderRadius: 8
+        padding: 8,
+        borderRadius: 28
     },
     selectedFilterContainer: {
         borderWidth: 1,
-        borderColor: '#111111',
+        borderColor: 'black',
         backgroundColor: '#111111',
         flexDirection: 'row',
         marginRight: 6,
         marginTop: 10,
-        padding: 12,
-        borderRadius: 8,
+        padding: 8,
+        borderRadius: 28,
     },
     unSelectedFilterText: {
         color: '#111111',
+        fontSize: 12
     },
     selectedFilterText: {
         color: '#ffffff',
+        fontSize: 12
     },
     listContent: {
         paddingHorizontal: 20,
